@@ -1,10 +1,11 @@
 # SwiftUI LazyContainer
 
-Performant lazy rendering in SwiftUI ScrollView.
+Performant lazy rendering in a SwiftUI ScrollView. Unlike LazyVStack, rendering is lazy when scrolling in any direction.
 
 ## Get Started
 
 Use `lazyContainer` to configure the scroll view for lazy rendering.
+
 Use `VeryLazyVStack` as a replacement for `VStack` or `LazyVStack` to only render its content when visible in the scroll view.
 
 ```swift
@@ -25,6 +26,7 @@ private struct ContentView: View {
 ## Advanced Usage
 
 Use `LazyVContent` for lazy rendering in any layout. Note that, when used frequently,`LazyVContent` can impact scroll performance.
+
 Use `fraction` to fix lazy content height at a fraction of the lazy container's height.
 
 ```swift
