@@ -10,23 +10,21 @@ internal struct LazyStackElementContent<Content, Element, ID>: View
 where Content : View,
       ID : Hashable
 {
-    var alignment: Alignment
     var axis: Axis
     var content: (Element) -> Content
-    var spacing: CGFloat
     var visibleElement: VisibleElement<Element, ID>
     
     var body: some View {
         switch axis {
         case .horizontal:
-            HStack(alignment: alignment.vertical, spacing: spacing) {
+            ZStack {
                 content(visibleElement.element)
             }
             .frame(width: visibleElement.length)
             .offset(x: visibleElement.offset)
             
         case .vertical:
-            VStack(alignment: alignment.horizontal, spacing: spacing) {
+            ZStack {
                 content(visibleElement.element)
             }
             .frame(height: visibleElement.length)

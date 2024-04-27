@@ -26,10 +26,8 @@ where Content : View,
         ZStack(alignment: alignment) {
             ForEach(visibleData) { visibleElement in
                 LazyStackElementContent(
-                    alignment: alignment,
                     axis: axis,
                     content: content,
-                    spacing: spacing,
                     visibleElement: visibleElement
                 )
             }
