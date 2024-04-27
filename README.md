@@ -58,7 +58,7 @@ private struct ContentView: View {
                 }
                 
                 VeryLazyVStack(data, contentHeight: .template) { element in
-                    /// Lazy contents
+                    /// Lazy content
                 }
             }
         }
