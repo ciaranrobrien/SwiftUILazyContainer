@@ -12,25 +12,24 @@ where Content : View,
       Data.Index == Int,
       ID : Hashable
 {
+    @Environment(\.lazyContainerSize) private var containerSize
     @Environment(\.lazyContentTemplateSizes) private var templates
     
     internal var alignment: Alignment
     internal var axis: Axis
     internal var content: (Data.Element) -> Content
-    internal var contentLength: LazyContentGeometry<CGFloat>
+    internal var contentLength: LazyContentAnchor<CGFloat>
     internal var data: Data
     internal var id: KeyPath<Data.Element, ID>
     internal var spacing: CGFloat?
     
     public var body: some View {
         if let resolvedContentLength {
-            let stackLength = stackLength(for: resolvedContentLength)
-            
             Color.clear
                 .hidden()
                 .frame(
-                    width: axis == .horizontal ? stackLength : nil,
-                    height: axis == .vertical ? stackLength : nil
+                    width: axis == .horizontal ? stackLength(for: resolvedContentLength) : nil,
+                    height: axis == .vertical ? stackLength(for: resolvedContentLength) : nil
                 )
                 .overlay(
                     GeometryReader { geometry in
@@ -48,16 +47,25 @@ where Content : View,
                             id: id,
                             spacing: spacing ?? .defaultSpacing
                         )
-                        .modifier(LazyStackContentModifier(stackLength: stackLength, stackOrigin: origin))
+                        .modifier(LazyStackContentModifier(contentLength: resolvedContentLength, stackOrigin: origin))
                     }
                 )
         }
     }
     
     private var resolvedContentLength: CGFloat? {
-        switch contentLength {
+        switch contentLength.source {
         case .fixed(let length): 
             length
+        case .fraction(let fraction):
+            if let containerSize {
+                switch axis {
+                case .horizontal: containerSize.width * fraction
+                case .vertical: containerSize.height * fraction
+                }
+            } else {
+                nil
+            }
         case .template(let id):
             if let size = templates[id] {
                 switch axis {
@@ -167,7 +175,7 @@ public extension VeryLazyStack {
     init(_ axis: Axis,
          _ data: Data,
          alignment: Alignment = .center,
-         contentLength: LazyContentGeometry<CGFloat>,
+         contentLength: LazyContentAnchor<CGFloat>,
          spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where Data.Element : Identifiable, Data.Element.ID == ID
@@ -202,7 +210,7 @@ public extension VeryLazyStack {
          _ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: Alignment = .center,
-         contentLength: LazyContentGeometry<CGFloat>,
+         contentLength: LazyContentAnchor<CGFloat>,
          spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     {

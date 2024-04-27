@@ -7,14 +7,14 @@
 import SwiftUI
 
 internal struct LazyStackContentModifier: AnimatableModifier {
-    var stackLength: CGFloat
+    var contentLength: CGFloat
     var stackOrigin: CGFloat
     
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get {
-            AnimatablePair(stackLength, stackOrigin)
+            AnimatablePair(contentLength, stackOrigin)
         } set {
-            stackLength = newValue.first
+            contentLength = newValue.first
             stackOrigin = newValue.second
         }
     }

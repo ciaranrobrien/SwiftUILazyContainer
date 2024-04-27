@@ -11,10 +11,23 @@ internal extension CGFloat {
 }
 
 
+internal extension LazyContentAnchor {
+    enum Source: Equatable {
+        case fixed(Value)
+        case fraction(Value)
+        case template(AnyHashable?)
+    }
+}
+
+
 internal extension EnvironmentValues {
-    var lazyContainerFrame: CGRect? {
-        get { self[LazyContainerFrameKey.self] }
-        set { self[LazyContainerFrameKey.self] = newValue }
+    var lazyContainerRenderFrame: CGRect? {
+        get { self[LazyContainerRenderFrameKey.self] }
+        set { self[LazyContainerRenderFrameKey.self] = newValue }
+    }
+    var lazyContainerSize: CGSize? {
+        get { self[LazyContainerSizeKey.self] }
+        set { self[LazyContainerSizeKey.self] = newValue }
     }
     var lazyContentTemplateSizes: [AnyHashable? : CGSize] {
         get { self[LazyContentTemplateSizesKey.self] }
@@ -27,8 +40,11 @@ internal extension EnvironmentValues {
 }
 
 
-private struct LazyContainerFrameKey: EnvironmentKey {
+private struct LazyContainerRenderFrameKey: EnvironmentKey {
     static let defaultValue: CGRect? = nil
+}
+private struct LazyContainerSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize? = nil
 }
 private struct LazyContentTemplateSizesKey: EnvironmentKey {
     static let defaultValue = [AnyHashable? : CGSize]()

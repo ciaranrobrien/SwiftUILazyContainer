@@ -92,7 +92,7 @@ public extension VeryLazyHStack {
     ///     state inside the content.
     init(_ data: Data,
          alignment: VerticalAlignment = .center,
-         contentWidth: LazyContentGeometry<CGFloat>,
+         contentWidth: LazyContentAnchor<CGFloat>,
          spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where Data.Element : Identifiable, Data.Element.ID == ID
@@ -124,7 +124,7 @@ public extension VeryLazyHStack {
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: VerticalAlignment = .center,
-         contentWidth: LazyContentGeometry<CGFloat>,
+         contentWidth: LazyContentAnchor<CGFloat>,
          spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     {

@@ -9,16 +9,17 @@ import SwiftUI
 public struct LazyContent<Content>: View
 where Content : View
 {
-    @Environment(\.lazyContainerFrame) private var container
+    @Environment(\.lazyContainerSize) private var containerSize
+    @Environment(\.lazyContainerRenderFrame) private var renderFrame
     @Environment(\.lazyContentTemplateSizes) private var templates
     
     internal var content: () -> Content
-    internal var size: LazyContentGeometry<CGSize>
+    internal var size: LazyContentAnchor<CGSize>
     
     public var body: some View {
-        if let resolvedSize {
+        if let renderFrame, let resolvedSize {
             GeometryReader { geometry in
-                if isVisible(for: geometry) {
+                if renderFrame.intersects(geometry.frame(in: .global)) {
                     ZStack(content: content)
                 }
             }
@@ -27,17 +28,17 @@ where Content : View
     }
     
     private var resolvedSize: CGSize? {
-        switch size {
-        case .fixed(let size): size
-        case .template(let id): templates[id]
-        }
-    }
-    
-    private func isVisible(for geometry: GeometryProxy) -> Bool {
-        if let container {
-            container.intersects(geometry.frame(in: .global))
-        } else {
-            false
+        switch size.source {
+        case .fixed(let size):
+            size
+        case .fraction(let fraction):
+            if let containerSize {
+                CGSize(width: containerSize.width * fraction.width, height: containerSize.height * fraction.height)
+            } else {
+                nil
+            }
+        case .template(let id):
+            templates[id]
         }
     }
 }
@@ -88,7 +89,7 @@ public extension LazyContent {
     ///   - size: A size for the view.
     ///   - content: The lazy content of this view. Avoid persisting state inside
     ///     the content.
-    init(size: LazyContentGeometry<CGSize>, @ViewBuilder content: @escaping () -> Content) {
+    init(size: LazyContentAnchor<CGSize>, @ViewBuilder content: @escaping () -> Content) {
         self.content = content
         self.size = size
     }

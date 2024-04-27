@@ -48,11 +48,12 @@ internal struct LazyContainerModifier: AnimatableModifier {
     func body(content: Content) -> some View {
         GeometryReader { geometry in
             content
-                .environment(\.lazyContainerFrame, frame(for: geometry))
+                .environment(\.lazyContainerSize, geometry.size)
+                .environment(\.lazyContainerRenderFrame, renderFrame(for: geometry))
         }
     }
     
-    private func frame(for geometry: GeometryProxy) -> CGRect {
+    private func renderFrame(for geometry: GeometryProxy) -> CGRect {
         let safeArea = EdgeInsets(
             top: geometry.safeAreaInsets.top * safeAreaFactors.top,
             leading: geometry.safeAreaInsets.leading * safeAreaFactors.leading,

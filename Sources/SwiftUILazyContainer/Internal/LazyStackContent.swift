@@ -12,7 +12,7 @@ where Content : View,
       Data.Index == Int,
       ID : Hashable
 {
-    @Environment(\.lazyContainerFrame) private var container
+    @Environment(\.lazyContainerRenderFrame) private var renderFrame
     @Environment(\.lazyStackGeometry) private var geometry
     
     var alignment: Alignment
@@ -38,16 +38,15 @@ where Content : View,
         let startIndex = data.startIndex
         let endIndex = data.endIndex
         
-        guard let container, startIndex != endIndex
+        guard let renderFrame, startIndex != endIndex
         else { return [] }
         
-        let elementLength = (geometry.first + spacing) / CGFloat(data.count)
-        let contentLength = elementLength - spacing
+        let elementLength = geometry.first + spacing
         let indexRange = startIndex...endIndex
         
         let (minOrigin, maxOrigin) = switch axis {
-        case .horizontal: (container.minX, container.maxX)
-        case .vertical: (container.minY, container.maxY)
+        case .horizontal: (renderFrame.minX, renderFrame.maxX)
+        case .vertical: (renderFrame.minY, renderFrame.maxY)
         }
         
         var minIndex = Int(floor((minOrigin + spacing - geometry.second) / elementLength)) + startIndex
@@ -74,7 +73,7 @@ where Content : View,
             return VisibleElement(
                 element: element,
                 id: element[keyPath: id],
-                length: contentLength,
+                length: geometry.first,
                 offset: CGFloat(index) * elementLength
             )
         }
