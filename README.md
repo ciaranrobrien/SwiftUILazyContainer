@@ -2,7 +2,7 @@
 
 Lazy rendering and layouts in a SwiftUI ScrollView.
 
-If existing SwiftUI rendering and layouts are performant for your app, use (https://github.com/ciaranrobrien/SwiftUIOnVisible)[SwiftUIOnVisible] instead for callbacks when views become visible in a ScrollView.
+If existing SwiftUI rendering and layouts are performant for your app, use [SwiftUIOnVisible](https://github.com/ciaranrobrien/SwiftUIOnVisible) instead for callbacks when views become visible in a ScrollView.
 
 ## Get Started
 
