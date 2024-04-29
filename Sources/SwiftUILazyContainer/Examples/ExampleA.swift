@@ -8,14 +8,14 @@ import SwiftUI
 
 /// Use `lazyContainer` to configure the scroll view for lazy rendering.
 ///
-/// Use `VeryLazyVStack` as a replacement for `VStack` or `LazyVStack`
+/// Use `AltLazyVStack` as a replacement for `VStack` or `LazyVStack`
 /// to only render its content when visible in the scroll view.
 private struct ContentView: View {
     var data: [FooElement]
     
     var body: some View {
         ScrollView {
-            VeryLazyVStack(data, contentHeight: 200) { element in
+            AltLazyVStack(data, contentHeight: 200) { element in
                 /// Lazy content
             }
         }

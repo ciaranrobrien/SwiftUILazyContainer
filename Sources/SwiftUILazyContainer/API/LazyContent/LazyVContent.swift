@@ -28,17 +28,10 @@ where Content : View
     }
     
     private var resolvedHeight: CGFloat? {
-        switch height.source {
-        case .fixed(let height):
-            height
-        case .fraction(let fraction):
-            if let containerSize {
-                containerSize.height * fraction
-            } else {
-                nil
-            }
-        case .template(let id):
-            templates[id]?.height
+        if let containerSize {
+            height.resolve(axis: .vertical, containerSize: containerSize, templates: templates)
+        } else {
+            nil
         }
     }
     
@@ -55,20 +48,7 @@ where Content : View
 public extension LazyVContent {
     /// A view that only renders its content when visible in a lazy vertical container.
     ///
-    /// Use `VeryLazyVStack` instead for improved performance.
-    ///
-    /// - Parameters:
-    ///   - height: A fixed height for the view.
-    ///   - content: The lazy content of this view. Avoid persisting state inside
-    ///     the content.
-    init(height: CGFloat, @ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-        self.height = .fixed(height)
-    }
-    
-    /// A view that only renders its content when visible in a lazy vertical container.
-    ///
-    /// Use `VeryLazyVStack` instead for improved performance.
+    /// Use `AltLazyVStack` instead for improved performance.
     ///
     /// - Parameters:
     ///   - height: A height for the view.

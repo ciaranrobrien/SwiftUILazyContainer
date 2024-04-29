@@ -28,17 +28,10 @@ where Content : View
     }
     
     private var resolvedWidth: CGFloat? {
-        switch width.source {
-        case .fixed(let width):
-            width
-        case .fraction(let fraction):
-            if let containerSize {
-                containerSize.width * fraction
-            } else {
-                nil
-            }
-        case .template(let id):
-            templates[id]?.width
+        if let containerSize {
+            width.resolve(axis: .horizontal, containerSize: containerSize, templates: templates)
+        } else {
+            nil
         }
     }
     
@@ -55,20 +48,7 @@ where Content : View
 public extension LazyHContent {
     /// A view that only renders its content when visible in a lazy horizontal container.
     ///
-    /// Use `VeryLazyHStack` instead for improved performance.
-    ///
-    /// - Parameters:
-    ///   - width: A fixed width for the view.
-    ///   - content: The lazy content of this view. Avoid persisting state inside
-    ///     the content.
-    init(width: CGFloat, @ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-        self.width = .fixed(width)
-    }
-    
-    /// A view that only renders its content when visible in a lazy horizontal container.
-    ///
-    /// Use `VeryLazyHStack` instead for improved performance.
+    /// Use `AltLazyHStack` instead for improved performance.
     ///
     /// - Parameters:
     ///   - width: A width for the view.

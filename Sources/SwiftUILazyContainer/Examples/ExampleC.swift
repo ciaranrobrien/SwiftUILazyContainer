@@ -6,37 +6,22 @@
 
 import SwiftUI
 
-/// Use `lazyContentTemplate` to provide a hidden template view to size lazy content.
-///
 /// Use `renderingPadding` and `rendersInSafeAreaEdges` to control how far
 /// away from the container's edges content is rendered.
 ///
-/// Combine lazy and non-lazy content in the same scroll view.
+/// Use `LazyVMasonry` to arrange subviews in a vertical masonry with lazy rendering.
+///
+/// Use `contentHeights` for a repeating pattern of subview heights.
 private struct ContentView: View {
     var data: [FooElement]
     
     var body: some View {
         ScrollView {
-            VStack {
-                ForEach(0..<3) { number in
-                    /// Non-lazy content
-                }
-                
-                VeryLazyVStack(data, contentHeight: .template) { element in
-                    FooContent(element: element)
-                }
+            LazyVMasonry(data, columns: 2, contentHeights: [160, 120]) { element in
+                FooContent(element: element)
             }
         }
         .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all)
-        .lazyContentTemplate(.vertical) {
-            VStack {
-                Text(verbatim: "Placeholder")
-                    .font(.headline)
-                
-                Text(verbatim: "Placeholder")
-                    .font(.subheadline)
-            }
-        }
     }
 }
 

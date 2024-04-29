@@ -8,28 +8,15 @@ import SwiftUI
 
 public extension View {
     /// Sets the hidden template content for sizing subviews in the lazy container.
-    ///
-    /// - Parameters:
-    ///   - axes: The axes of the lazy container.
-    ///   - templateContent: The hidden template content.
-    func lazyContentTemplate(
-        _ axes: Axis.Set,
-        @ViewBuilder template templateContent: @escaping () -> some View
-    ) -> some View {
-        modifier(LazyContentTemplateModifier(axes: axes, id: nil, templateContent: templateContent))
+    func lazyContentTemplate() -> some View {
+        transformPreference(LazyContentTemplateAnchorsKey.self) { $0[.none] = .empty }
     }
     
     /// Sets the hidden template content for sizing subviews in the lazy container.
     ///
     /// - Parameters:
-    ///   - axes: The axes of the lazy container.
     ///   - id: The identifier of the hidden template content.
-    ///   - templateContent: The hidden template content.
-    func lazyContentTemplate(
-        _ axes: Axis.Set,
-        id: some Hashable,
-        @ViewBuilder template templateContent: @escaping () -> some View
-    ) -> some View {
-        modifier(LazyContentTemplateModifier(axes: axes, id: AnyHashable(id), templateContent: templateContent))
+    func lazyContentTemplate(id: some Hashable) -> some View {
+        transformPreference(LazyContentTemplateAnchorsKey.self) { $0[id] = .empty }
     }
 }

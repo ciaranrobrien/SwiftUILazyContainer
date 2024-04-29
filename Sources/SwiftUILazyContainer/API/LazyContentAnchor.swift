@@ -11,10 +11,13 @@ public struct LazyContentAnchor<Value>: Equatable
 where Value : Equatable
 {
     private init(_ source: Source) {
-        self.source = source
+        self.sources = [source]
+    }
+    private init(_ sources: [Source]) {
+        self.sources = sources
     }
     
-    internal var source: Source
+    internal var sources: [Source]
 }
 
 
@@ -49,15 +52,43 @@ public extension LazyContentAnchor {
     
     /// The anchor fixed to the size of the hidden template content.
     ///
-    /// Use `lazyContentTemplate` on the container to set the hidden template content.
+    /// Use `lazyContentTemplate` within `lazyContainer` to set the hidden template content.
     static var template: Self {
         Self(.template(nil))
     }
     
     /// The anchor fixed to the size of the hidden template content with the provided identifier.
     ///
-    /// Use `lazyContentTemplate` on the container to set the hidden template content.
+    /// Use `lazyContentTemplate` within `lazyContainer` to set the hidden template content.
     static func template(id: some Hashable) -> Self {
         Self(.template(AnyHashable(id)))
+    }
+    
+    /// The anchor fixed to the sum of multiple anchors.
+    static func sum(_ anchors: Self...) -> Self {
+        Self(anchors.flatMap(\.sources))
+    }
+    
+    /// The anchor fixed to the sum of multiple anchors.
+    static func sum<Anchors>(_ anchors: Anchors) -> Self
+    where Anchors : Sequence,
+          Anchors.Element == Self
+    {
+        Self(anchors.flatMap(\.sources))
+    }
+}
+
+
+extension LazyContentAnchor<CGFloat>: ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral {
+    public init(integerLiteral value: IntegerLiteralType) {
+        self = .fixed(CGFloat(value))
+    }
+    
+    public init(floatLiteral value: Double) {
+        self = .fixed(value)
+    }
+    
+    static func + (lhs: Self, rhs: Self) -> Self {
+        Self(lhs.sources + rhs.sources)
     }
 }

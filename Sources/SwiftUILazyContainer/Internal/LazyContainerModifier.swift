@@ -6,11 +6,14 @@
 
 import SwiftUI
 
-internal struct LazyContainerModifier: AnimatableModifier {
+internal struct LazyContainerModifier<Templates>: AnimatableModifier
+where Templates : View
+{
     private var insets: EdgeInsets
     private var safeAreaFactors: EdgeInsets
+    private var templates: () -> Templates
     
-    init(padding: CGFloat, safeAreaEdges: Edge.Set) {
+    init(padding: CGFloat, safeAreaEdges: Edge.Set, templates: @escaping () -> Templates) {
         self.insets = EdgeInsets(
             top: padding,
             leading: padding,
@@ -23,9 +26,10 @@ internal struct LazyContainerModifier: AnimatableModifier {
             bottom: safeAreaEdges.contains(.bottom) ? 1 : 0,
             trailing: safeAreaEdges.contains(.trailing) ? 1 : 0
         )
+        self.templates = templates
     }
     
-    init(insets: EdgeInsets, safeAreaEdges: Edge.Set) {
+    init(insets: EdgeInsets, safeAreaEdges: Edge.Set, templates: @escaping () -> Templates) {
         self.insets = insets
         self.safeAreaFactors = EdgeInsets(
             top: safeAreaEdges.contains(.top) ? 1 : 0,
@@ -33,6 +37,7 @@ internal struct LazyContainerModifier: AnimatableModifier {
             bottom: safeAreaEdges.contains(.bottom) ? 1 : 0,
             trailing: safeAreaEdges.contains(.trailing) ? 1 : 0
         )
+        self.templates = templates
     }
     
     var animatableData: AnimatablePair<EdgeInsets.AnimatableData, EdgeInsets.AnimatableData> {
@@ -47,9 +52,32 @@ internal struct LazyContainerModifier: AnimatableModifier {
     
     func body(content: Content) -> some View {
         GeometryReader { geometry in
-            content
-                .environment(\.lazyContainerSize, geometry.size)
-                .environment(\.lazyContainerRenderFrame, renderFrame(for: geometry))
+            ZStack {
+                templates()
+                    .fixedSize()
+                    .transformAnchorPreference(key: LazyContentTemplateAnchorsKey.self, value: .bounds) {
+                        for (id, _) in $0 {
+                            $0[id] = .resolved($1)
+                        }
+                    }
+            }
+            .hidden()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .overlayPreferenceValue(LazyContentTemplateAnchorsKey.self) { anchors in
+                let sizes = anchors.reduce(into: [AnyHashable? : CGSize]()) { sizes, anchorPair in
+                    switch anchorPair.value {
+                    case .empty: break
+                    case .resolved(let anchor): sizes[anchorPair.key] = geometry[anchor].size
+                    }
+                }
+                
+                content
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .environment(\.lazyContainerSize, geometry.size)
+                    .environment(\.lazyContainerRenderFrame, renderFrame(for: geometry))
+                    .environment(\.lazyContentTemplateSizes, sizes)
+            }
+            .transformPreference(LazyContentTemplateAnchorsKey.self) { $0.removeAll() }
         }
     }
     

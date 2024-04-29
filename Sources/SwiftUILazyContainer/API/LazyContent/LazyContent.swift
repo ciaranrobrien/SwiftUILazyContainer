@@ -28,17 +28,10 @@ where Content : View
     }
     
     private var resolvedSize: CGSize? {
-        switch size.source {
-        case .fixed(let size):
-            size
-        case .fraction(let fraction):
-            if let containerSize {
-                CGSize(width: containerSize.width * fraction.width, height: containerSize.height * fraction.height)
-            } else {
-                nil
-            }
-        case .template(let id):
-            templates[id]
+        if let containerSize {
+            size.resolve(containerSize: containerSize, templates: templates)
+        } else {
+            nil
         }
     }
 }
@@ -47,7 +40,7 @@ where Content : View
 public extension LazyContent {
     /// A view that only renders its content when visible in a lazy container.
     ///
-    /// Use `VeryLazyStack` instead for improved performance.
+    /// Use `LazyStack` instead for improved performance.
     ///
     /// Use `LazyHContent` or `LazyVContent`instead
     /// when the container's scrolling is limited to a single axis.
@@ -64,7 +57,7 @@ public extension LazyContent {
     
     /// A view that only renders its content when visible in a lazy container.
     ///
-    /// Use `VeryLazyStack` instead for improved performance.
+    /// Use `LazyStack` instead for improved performance.
     ///
     /// Use `LazyHContent` or `LazyVContent`instead
     /// when the container's scrolling is limited to a single axis.
@@ -80,7 +73,7 @@ public extension LazyContent {
     
     /// A view that only renders its content when visible in a lazy container.
     ///
-    /// Use `VeryLazyStack` instead for improved performance.
+    /// Use `LazyStack` instead for improved performance.
     ///
     /// Use `LazyHContent` or `LazyVContent`instead
     /// when the container's scrolling is limited to a single axis.

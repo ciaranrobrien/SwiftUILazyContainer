@@ -1,31 +1,28 @@
 # SwiftUI LazyContainer
 
-Performant lazy rendering in a SwiftUI ScrollView. Unlike LazyVStack, rendering is lazy when scrolling in any direction.
+Lazy rendering and layouts in a SwiftUI ScrollView.
+
+If existing SwiftUI rendering and layouts are performant for your app, use (https://github.com/ciaranrobrien/SwiftUIOnVisible)[SwiftUIOnVisible] instead for callbacks when views become visible in a ScrollView.
 
 ## Get Started
 
 Use `lazyContainer` to configure the scroll view for lazy rendering.
 
-Use `VeryLazyVStack` as a replacement for `VStack` or `LazyVStack` to only render its content when visible in the scroll view.
+Use `AltLazyVStack` as a replacement for `VStack` or `LazyVStack` to only render its content when visible in the scroll view.
 
 ```swift
-private struct ContentView: View {
-    var data: [FooElement] /// Identifiable data
-    
-    var body: some View {
-        ScrollView {
-            VeryLazyVStack(data, contentHeight: 200) { element in
-                /// Lazy content
-            }
+    ScrollView {
+        AltLazyVStack(data, contentHeight: 200) { element in
+            /// Lazy content
         }
-        .lazyContainer()
     }
+    .lazyContainer()
 }
 ```
 
 ## Advanced Usage
 
-Use `LazyVContent` for lazy rendering in any layout. Note that, when used frequently,`LazyVContent` can impact scroll performance.
+Use `LazyVContent` for lazy rendering in an existing SwiftUI layout. Note that, when used frequently,`LazyVContent` can impact scroll performance.
 
 Use `fraction` to fix lazy content height at a fraction of the lazy container's height.
 
@@ -59,13 +56,12 @@ private struct ContentView: View {
                     /// Non-lazy content
                 }
                 
-                VeryLazyVStack(data, contentHeight: .template) { element in
+                AltLazyVStack(data, contentHeight: .template) { element in
                     /// Lazy content
                 }
             }
         }
-        .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all)
-        .lazyContentTemplate(.vertical) {
+        .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all) {
             VStack {
                 Text(verbatim: "Placeholder")
                     .font(.headline)
@@ -73,6 +69,8 @@ private struct ContentView: View {
                 Text(verbatim: "Placeholder")
                     .font(.subheadline)
             }
+            .lineLimit(1)
+            .lazyContentTemplate()
         }
     }
 }

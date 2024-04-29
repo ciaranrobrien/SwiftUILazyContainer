@@ -17,7 +17,7 @@ public extension View {
         renderingPadding padding: CGFloat = .zero,
         rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all
     ) -> some View {
-        modifier(LazyContainerModifier(padding: padding, safeAreaEdges: safeAreaEdges))
+        modifier(LazyContainerModifier(padding: padding, safeAreaEdges: safeAreaEdges, templates: { EmptyView() }))
     }
     
     /// Configures the outermost container for lazy subview rendering.
@@ -30,6 +30,38 @@ public extension View {
         renderingInsets insets: EdgeInsets,
         rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all
     ) -> some View {
-        modifier(LazyContainerModifier(insets: insets, safeAreaEdges: safeAreaEdges))
+        modifier(LazyContainerModifier(insets: insets, safeAreaEdges: safeAreaEdges, templates: { EmptyView() }))
+    }
+    
+    /// Configures the outermost container for lazy subview rendering.
+    ///
+    /// - Parameters:
+    ///   - padding: The invisible padding around the container that extends the area in
+    ///     which subviews are rendered.
+    ///   - safeAreaEdges: The set of safe area edges to render subviews in.
+    ///   - templates: The hidden template content for sizing subviews. Use
+    ///     `lazyContentTemplate` on each template.
+    func lazyContainer(
+        renderingPadding padding: CGFloat = .zero,
+        rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all,
+        @ViewBuilder templates: @escaping () -> some View
+    ) -> some View {
+        modifier(LazyContainerModifier(padding: padding, safeAreaEdges: safeAreaEdges, templates: templates))
+    }
+    
+    /// Configures the outermost container for lazy subview rendering.
+    ///
+    /// - Parameters:
+    ///   - insets: The invisible insets around the container that extend the area in
+    ///     which subviews are rendered.
+    ///   - safeAreaEdges: The set of safe area edges to render subviews in.
+    ///   - templates: The hidden template content for sizing subviews. Use
+    ///     `lazyContentTemplate` on each template.
+    func lazyContainer(
+        renderingInsets insets: EdgeInsets,
+        rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all,
+        @ViewBuilder templates: @escaping () -> some View
+    ) -> some View {
+        modifier(LazyContainerModifier(insets: insets, safeAreaEdges: safeAreaEdges, templates: templates))
     }
 }
