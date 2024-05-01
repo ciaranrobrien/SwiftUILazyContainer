@@ -22,6 +22,6 @@ let package = Package(
         .library(name: "SwiftUILazyContainer", targets: ["SwiftUILazyContainer"])
     ],
     targets: [
-        .target(name: "SwiftUILazyContainer", dependencies: [])
+        .target(name: "SwiftUILazyContainer")
     ]
 )

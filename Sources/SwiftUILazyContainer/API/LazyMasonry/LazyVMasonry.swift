@@ -9,7 +9,7 @@ import SwiftUI
 public struct LazyVMasonry<Content, ContentHeights, Data, ID>: View
 where Content : View,
       ContentHeights : RandomAccessCollection,
-      ContentHeights.Element == LazyContentAnchor<CGFloat>,
+      ContentHeights.Element == LazySubviewSize,
       Data : RandomAccessCollection,
       Data.Index == Int,
       ID : Hashable
@@ -19,35 +19,32 @@ where Content : View,
 
 
 public extension LazyVMasonry {
+
     /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentHeight: The height of each subview.
+    ///   - columns: The columns of the masonry.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeights: The repeating collection of subview heights.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         contentHeight: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         columns: [LazyLineSize],
+         spacing: Double = .zero,
+         contentHeights: ContentHeights,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentHeights == CollectionOfOne<LazyContentAnchor<CGFloat>>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
         body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: CollectionOfOne(contentHeight),
+            contentSizeProvider: .fixed(sizes: contentHeights),
             data: data,
             id: \.id,
             lines: columns,
@@ -56,138 +53,63 @@ public extension LazyVMasonry {
     }
     
     /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the masonry uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentHeight: The height of each subview.
+    ///   - columns: The columns of the masonry.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeights: The repeating collection of subview heights.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
-    init(_ data: Data,
+    init(_ axis: Axis,
+         _ data: Data,
          id: KeyPath<Data.Element, ID>,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         contentHeight: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         lines: [LazyLineSize],
+         spacing: Double = .zero,
+         contentHeights: ContentHeights,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where ContentHeights == CollectionOfOne<LazyContentAnchor<CGFloat>>
     {
         body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: CollectionOfOne(contentHeight),
+            contentSizeProvider: .fixed(sizes: contentHeights),
             data: data,
             id: id,
-            lines: columns,
+            lines: lines,
             spacing: spacing
         )
     }
     
     /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentHeights: The repeating collection of subview heights.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    init(_ data: Data,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         contentHeights: ContentHeights,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where
-    Data.Element : Identifiable,
-    Data.Element.ID == ID
-    {
-        body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
-            axis: .vertical,
-            content: content,
-            contentLengths: contentHeights,
-            data: data,
-            id: \.id,
-            lines: columns,
-            spacing: spacing
-        )
-    }
-    
-    /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - id: The key path to the provided data's identifier.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentHeights: The repeating collection of subview heights.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    init(_ data: Data,
-         id: KeyPath<Data.Element, ID>,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         contentHeights: ContentHeights,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
-    {
-        body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
-            axis: .vertical,
-            content: content,
-            contentLengths: contentHeights,
-            data: data,
-            id: id,
-            lines: columns,
-            spacing: spacing
-        )
-    }
-    
-    /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
+    ///   - columns: The columns of the masonry.
     ///   - spacing: The distance between adjacent subviews.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     ///   - contentHeight: The subview height for each element.
     init(_ data: Data,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         spacing: CGFloat? = nil,
+         columns: [LazyLineSize],
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentHeight: (Data.Element) -> LazyContentAnchor<CGFloat>)
+         contentHeight: @escaping (Data.Element) -> LazySubviewSize)
     where
-    ContentHeights == [LazyContentAnchor<CGFloat>],
+    ContentHeights == EmptyCollection<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
         body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: data.map(contentHeight),
+            contentSizeProvider: .dynamic(resolveSize: contentHeight),
             data: data,
             id: \.id,
             lines: columns,
@@ -196,33 +118,30 @@ public extension LazyVMasonry {
     }
     
     /// A view that arranges its subviews in a vertical masonry, and only renders each subview
-    /// when visible in a lazy vertical container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the masonry uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
-    ///   - columns: The number of columns.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
+    ///   - columns: The columns of the masonry.
     ///   - spacing: The distance between adjacent subviews.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     ///   - contentHeight: The subview height for each element.
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
-         columns: Int,
-         alignment: HorizontalAlignment = .center,
-         spacing: CGFloat? = nil,
+         columns: [LazyLineSize],
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentHeight: (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where ContentHeights == [LazyContentAnchor<CGFloat>]
+         contentHeight: @escaping (Data.Element) -> LazySubviewSize)
+    where ContentHeights == EmptyCollection<LazySubviewSize>
     {
         body = LazyMasonry(
-            alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: data.map(contentHeight),
+            contentSizeProvider: .dynamic(resolveSize: contentHeight),
             data: data,
             id: id,
             lines: columns,

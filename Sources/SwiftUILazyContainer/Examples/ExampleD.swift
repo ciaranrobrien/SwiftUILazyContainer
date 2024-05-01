@@ -6,35 +6,43 @@
 
 import SwiftUI
 
-/// Use `templates` and `lazyContentTemplate` to provide hidden template views for
-/// sizing lazy content.
+/// Use the `contentHeight` closure to resolve subview heights for each element.
 ///
-/// Combine lazy and non-lazy content in the same scroll view.
+/// Combine `LazySubviewSize` values with `+` or `sum` to build subview heights
+/// from multiple anchors.
+///
+/// Provide multiple template views to `lazyContainer`. Assign each template a unique
+/// identifier to resolve different template sizes during layout.
 private struct ContentView: View {
     var data: [FooElement]
     
     var body: some View {
         ScrollView {
-            VStack {
-                ForEach(0..<3) { number in
-                    /// Non-lazy content
-                }
-                
-                AltLazyVStack(data, contentHeight: .template) { element in
-                    /// Lazy content
-                }
+            LazyVMasonry(data, columns: .adaptive(minSize: 140)) { element in
+                /// Lazy content
+            } contentHeight: { element in
+                let imageAnchor = LazySubviewSize.aspect(element.imageSize.width / element.imageSize.height)
+                let titleAnchor = LazySubviewSize.template(id: element.subtitle == nil ? 1 : 2)
+                return imageAnchor + titleAnchor
             }
         }
         .lazyContainer {
+            Text(verbatim: "Title Placeholder")
+                .font(.headline)
+                .padding()
+                .lineLimit(1)
+                .lazySubviewTemplate(id: 1)
+            
             VStack {
-                Text(verbatim: "Placeholder")
+                Text(verbatim: "Title Placeholder")
                     .font(.headline)
                 
-                Text(verbatim: "Placeholder")
+                Text(verbatim: "Subtitle Placeholder")
                     .font(.subheadline)
             }
+            .padding()
             .lineLimit(1)
-            .lazyContentTemplate()
+            .lazySubviewTemplate(id: 2)
         }
     }
 }
@@ -42,4 +50,8 @@ private struct ContentView: View {
 
 private struct FooElement: Identifiable {
     let id: UUID
+    let imageSize: CGSize
+    let imageURL: URL
+    let title: String
+    let subtitle: String?
 }

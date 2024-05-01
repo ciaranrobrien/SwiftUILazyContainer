@@ -2,7 +2,7 @@
 
 Lazy rendering and layouts in a SwiftUI ScrollView.
 
-If existing SwiftUI layouts are performant for your app, use [SwiftUIOnVisible](https://github.com/ciaranrobrien/SwiftUIOnVisible) instead for callbacks when views become visible in a ScrollView.
+For existing SwiftUI layouts, consider [SwiftUIOnVisible](https://github.com/ciaranrobrien/SwiftUIOnVisible) instead to get callbacks when subviews become visible in a ScrollView.
 
 ## Get Started
 
@@ -43,7 +43,7 @@ private struct ContentView: View {
 }
 ```
 
-Use `lazyContentTemplate` to provide a hidden template view to size lazy content.
+Use `lazySubviewTemplate` to provide a hidden template view to size lazy content.
 
 ```swift
 private struct ContentView: View {
@@ -70,7 +70,7 @@ private struct ContentView: View {
                     .font(.subheadline)
             }
             .lineLimit(1)
-            .lazyContentTemplate()
+            .lazySubviewTemplate()
         }
     }
 }

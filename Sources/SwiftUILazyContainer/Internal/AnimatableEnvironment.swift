@@ -12,13 +12,18 @@ where Value : Animatable
     var keyPath: WritableKeyPath<EnvironmentValues, Value>
     var value: Value
     
-    var animatableData: Value {
-        get { value }
-        set { value = newValue }
+    init(_ keyPath: WritableKeyPath<EnvironmentValues, Value>, _ value: Value) {
+        self.keyPath = keyPath
+        self.value = value
+    }
+    
+    var animatableData: Value.AnimatableData {
+        get { value.animatableData }
+        set { value.animatableData = newValue }
     }
     
     func body(content: Content) -> some View {
         content
-            .environment(keyPath, animatableData)
+            .environment(keyPath, value)
     }
 }

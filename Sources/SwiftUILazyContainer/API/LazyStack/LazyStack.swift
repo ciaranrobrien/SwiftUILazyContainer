@@ -6,78 +6,75 @@
 
 import SwiftUI
 
-public struct LazyStack<Content, ContentLengths, Data, ID>: View
+public struct LazyStack<Content, ContentSizes, Data, ID>: View
 where Content : View,
-      ContentLengths : RandomAccessCollection,
-      ContentLengths.Element == LazyContentAnchor<CGFloat>,
+      ContentSizes : RandomAccessCollection,
+      ContentSizes.Element == LazySubviewSize,
       Data : RandomAccessCollection,
       Data.Index == Int,
       ID : Hashable
 {
     @Environment(\.lazyContainerSize) private var containerSize
-    @Environment(\.lazyContentTemplateSizes) private var templates
+    @Environment(\.lazySubviewTemplateSizes) private var templates
     
     internal var alignment: Alignment
     internal var axis: Axis
     internal var content: (Data.Element) -> Content
-    internal var contentLengths: ContentLengths
+    internal var contentSizeProvider: LazySubviewSizeProvider<Data.Element, ContentSizes>
     internal var data: Data
     internal var id: KeyPath<Data.Element, ID>
-    internal var spacing: CGFloat?
+    internal var spacing: Double
     
     public var body: some View {
-        if let contentLengths = resolvedContentLengths {
-            GeometryReader { geometry in
-                let frame = geometry.frame(in: .global)
-                let origin = switch axis {
-                case .horizontal: frame.minX
-                case .vertical: frame.minY
+        LengthReader(axis.orthogonal) { breadth in
+            if let (containerLength, layoutBreadth) = resolved(for: breadth) {
+                GeometryReader { geometry in
+                    let frame = geometry.frame(in: .global)
+                    let (breadth, length, origin): (Double, Double, Double) = switch axis {
+                    case .horizontal: (frame.height, frame.width, frame.minX)
+                    case .vertical: (frame.width, frame.height, frame.minY)
+                    }
+                    
+                    LazyStackLayout(
+                        alignment: alignment,
+                        axis: axis,
+                        content: content,
+                        data: data,
+                        id: id,
+                        layoutBreadth: breadth,
+                        spacing: spacing
+                    )
+                    .modifier(AnimatableEnvironment(\.lazyLayoutLength, length))
+                    .modifier(AnimatableEnvironment(\.lazyLayoutOrigin, origin))
                 }
-                
-                LazyStackLayout(
-                    alignment: alignment,
+                .modifier(LazyStackModifier(
                     axis: axis,
-                    content: content,
+                    containerLength: containerLength,
+                    contentSizeProvider: contentSizeProvider,
                     data: data,
-                    id: id,
-                    spacing: spacing ?? .defaultSpacing
-                )
-                .modifier(AnimatableEnvironment(keyPath: \.lazyContentLengths, value: contentLengths))
-                .modifier(AnimatableEnvironment(keyPath: \.lazyLayoutOrigin, value: origin))
+                    layoutBreadth: layoutBreadth,
+                    spacing: spacing
+                ))
             }
-            .frame(
-                width: axis == .horizontal ? stackLength(for: contentLengths) : nil,
-                height: axis == .vertical ? stackLength(for: contentLengths) : nil
-            )
         }
     }
     
-    private var resolvedContentLengths: [Double]? {
-        guard !contentLengths.isEmpty, let containerSize
+    private func resolved(for breadth: Double?) -> (Double, Double)? {
+        guard let containerSize
         else { return nil }
         
-        return contentLengths.map {
-            $0.resolve(axis: axis, containerSize: containerSize, templates: templates)
+        return switch axis {
+        case .horizontal:
+            (containerSize.width, breadth ?? containerSize.height)
+        case .vertical:
+            (containerSize.height, breadth ?? containerSize.width)
         }
-    }
-    
-    private func stackLength(for contentLengths: [Double]) -> CGFloat {
-        let dataCount = data.count
-        
-        guard dataCount > .zero
-        else { return .zero }
-        
-        let (quotient, remainder) = dataCount.quotientAndRemainder(dividingBy: contentLengths.count)
-        let quotientLength = CGFloat(quotient) * contentLengths.reduce(.zero, +)
-        let remainderLength = (0..<remainder).reduce(.zero) { $0 + contentLengths[$1] }
-        let spacingLength = CGFloat(dataCount - 1) * (spacing ?? .defaultSpacing)
-        
-        return quotientLength + remainderLength + spacingLength
     }
 }
 
 
 public extension LazyStack {
+    
     /// A view that arranges its subviews in a line, and only renders each subview when visible
     /// in a lazy container.
     ///
@@ -87,18 +84,18 @@ public extension LazyStack {
     ///   - axis: The layout axis of this stack.
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentLength: The length of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSize: The size of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ axis: Axis,
          _ data: Data,
          alignment: Alignment = .center,
-         contentLength: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentSize: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentLengths == CollectionOfOne<LazyContentAnchor<CGFloat>>,
+    ContentSizes == CollectionOfOne<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -108,7 +105,7 @@ public extension LazyStack {
         )
         self.axis = axis
         self.content = content
-        self.contentLengths = CollectionOfOne(contentLength)
+        self.contentSizeProvider = .fixed(sizes: CollectionOfOne(contentSize))
         self.data = data
         self.id = \.id
         self.spacing = spacing
@@ -124,18 +121,18 @@ public extension LazyStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentLength: The length of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSize: The size of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ axis: Axis,
          _ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: Alignment = .center,
-         contentLength: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentSize: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where ContentLengths == CollectionOfOne<LazyContentAnchor<CGFloat>>
+    where ContentSizes == CollectionOfOne<LazySubviewSize>
     {
         self.alignment = Alignment(
             horizontal: axis == .horizontal ? .leading : alignment.horizontal,
@@ -143,76 +140,7 @@ public extension LazyStack {
         )
         self.axis = axis
         self.content = content
-        self.contentLengths = CollectionOfOne(contentLength)
-        self.data = data
-        self.id = id
-        self.spacing = spacing
-    }
-    
-    /// A view that arranges its subviews in a line, and only renders each subview when visible
-    /// in a lazy container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - axis: The layout axis of this stack.
-    ///   - data: The data that the stack uses to create views dynamically.
-    ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentLengths: The repeating collection of subview lengths.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    init(_ axis: Axis,
-         _ data: Data,
-         alignment: Alignment = .center,
-         contentLengths: ContentLengths,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where
-    Data.Element : Identifiable,
-    Data.Element.ID == ID
-    {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
-        self.axis = axis
-        self.content = content
-        self.contentLengths = contentLengths
-        self.data = data
-        self.id = \.id
-        self.spacing = spacing
-    }
-    
-    /// A view that arranges its subviews in a line, and only renders each subview when visible
-    /// in a lazy container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - axis: The layout axis of this stack.
-    ///   - data: The data that the stack uses to create views dynamically.
-    ///   - id: The key path to the provided data's identifier.
-    ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentLengths: The repeating collection of subview lengths.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    init(_ axis: Axis,
-         _ data: Data,
-         id: KeyPath<Data.Element, ID>,
-         alignment: Alignment = .center,
-         contentLengths: ContentLengths,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
-    {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
-        self.axis = axis
-        self.content = content
-        self.contentLengths = contentLengths
+        self.contentSizeProvider = .fixed(sizes: CollectionOfOne(contentSize))
         self.data = data
         self.id = id
         self.spacing = spacing
@@ -228,17 +156,16 @@ public extension LazyStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSizes: The repeating collection of subview sizes.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
-    ///   - contentLength: The subview length for each element.
     init(_ axis: Axis,
          _ data: Data,
          alignment: Alignment = .center,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentLength: @escaping (Data.Element) -> LazyContentAnchor<CGFloat>)
+         spacing: Double = .zero,
+         contentSizes: ContentSizes,
+         @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentLengths == [LazyContentAnchor<CGFloat>],
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -248,7 +175,77 @@ public extension LazyStack {
         )
         self.axis = axis
         self.content = content
-        self.contentLengths = data.map(contentLength)
+        self.contentSizeProvider = .fixed(sizes: contentSizes)
+        self.data = data
+        self.id = \.id
+        self.spacing = spacing
+    }
+    
+    /// A view that arranges its subviews in a line, and only renders each subview when visible
+    /// in a lazy container.
+    ///
+    /// `scrollTargetLayout` has no effect on this view or its subviews.
+    ///
+    /// - Parameters:
+    ///   - axis: The layout axis of this stack.
+    ///   - data: The data that the stack uses to create views dynamically.
+    ///   - id: The key path to the provided data's identifier.
+    ///   - alignment: The guide for aligning the subviews in this stack.
+    ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSizes: The repeating collection of subview sizes.
+    ///   - content: The view builder that creates views dynamically. Avoid persisting
+    ///     state inside the content.
+    init(_ axis: Axis,
+         _ data: Data,
+         id: KeyPath<Data.Element, ID>,
+         alignment: Alignment = .center,
+         spacing: Double = .zero,
+         contentSizes: ContentSizes,
+         @ViewBuilder content: @escaping (Data.Element) -> Content)
+    {
+        self.alignment = Alignment(
+            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
+            vertical: axis == .vertical ? .top : alignment.vertical
+        )
+        self.axis = axis
+        self.content = content
+        self.contentSizeProvider = .fixed(sizes: contentSizes)
+        self.data = data
+        self.id = id
+        self.spacing = spacing
+    }
+    
+    /// A view that arranges its subviews in a line, and only renders each subview when visible
+    /// in a lazy container.
+    ///
+    /// `scrollTargetLayout` has no effect on this view or its subviews.
+    ///
+    /// - Parameters:
+    ///   - axis: The layout axis of this stack.
+    ///   - data: The data that the stack uses to create views dynamically.
+    ///   - alignment: The guide for aligning the subviews in this stack.
+    ///   - spacing: The distance between adjacent subviews.
+    ///   - content: The view builder that creates views dynamically. Avoid persisting
+    ///     state inside the content.
+    ///   - contentSize: The subview size for each element.
+    init(_ axis: Axis,
+         _ data: Data,
+         alignment: Alignment = .center,
+         spacing: Double = .zero,
+         @ViewBuilder content: @escaping (Data.Element) -> Content,
+         contentSize: @escaping (Data.Element) -> LazySubviewSize)
+    where
+    ContentSizes == EmptyCollection<LazySubviewSize>,
+    Data.Element : Identifiable,
+    Data.Element.ID == ID
+    {
+        self.alignment = Alignment(
+            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
+            vertical: axis == .vertical ? .top : alignment.vertical
+        )
+        self.axis = axis
+        self.content = content
+        self.contentSizeProvider = .dynamic(resolveSize: contentSize)
         self.data = data
         self.id = \.id
         self.spacing = spacing
@@ -267,15 +264,15 @@ public extension LazyStack {
     ///   - spacing: The distance between adjacent subviews.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
-    ///   - contentLength: The subview length for each element.
+    ///   - contentSize: The subview size for each element.
     init(_ axis: Axis,
          _ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: Alignment = .center,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentLength: @escaping (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where ContentLengths == [LazyContentAnchor<CGFloat>]
+         contentSize: @escaping (Data.Element) -> LazySubviewSize)
+    where ContentSizes == EmptyCollection<LazySubviewSize>
     {
         self.alignment = Alignment(
             horizontal: axis == .horizontal ? .leading : alignment.horizontal,
@@ -283,7 +280,7 @@ public extension LazyStack {
         )
         self.axis = axis
         self.content = content
-        self.contentLengths = data.map(contentLength)
+        self.contentSizeProvider = .dynamic(resolveSize: contentSize)
         self.data = data
         self.id = id
         self.spacing = spacing

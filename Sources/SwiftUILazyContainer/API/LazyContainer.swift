@@ -7,6 +7,7 @@
 import SwiftUI
 
 public extension View {
+    
     /// Configures the outermost container for lazy subview rendering.
     ///
     /// - Parameters:
@@ -14,7 +15,7 @@ public extension View {
     ///     which subviews are rendered.
     ///   - safeAreaEdges: The set of safe area edges to render subviews in.
     func lazyContainer(
-        renderingPadding padding: CGFloat = .zero,
+        renderingPadding padding: Double = .zero,
         rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all
     ) -> some View {
         modifier(LazyContainerModifier(padding: padding, safeAreaEdges: safeAreaEdges, templates: { EmptyView() }))
@@ -40,9 +41,9 @@ public extension View {
     ///     which subviews are rendered.
     ///   - safeAreaEdges: The set of safe area edges to render subviews in.
     ///   - templates: The hidden template content for sizing subviews. Use
-    ///     `lazyContentTemplate` on each template.
+    ///     `lazySubviewTemplate` on each template.
     func lazyContainer(
-        renderingPadding padding: CGFloat = .zero,
+        renderingPadding padding: Double = .zero,
         rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all,
         @ViewBuilder templates: @escaping () -> some View
     ) -> some View {
@@ -56,7 +57,7 @@ public extension View {
     ///     which subviews are rendered.
     ///   - safeAreaEdges: The set of safe area edges to render subviews in.
     ///   - templates: The hidden template content for sizing subviews. Use
-    ///     `lazyContentTemplate` on each template.
+    ///     `lazySubviewTemplate` on each template.
     func lazyContainer(
         renderingInsets insets: EdgeInsets,
         rendersInSafeAreaEdges safeAreaEdges: Edge.Set = .all,

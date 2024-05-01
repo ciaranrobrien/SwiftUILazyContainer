@@ -7,16 +7,17 @@
 import SwiftUI
 
 public extension View {
+    
     /// Sets the hidden template content for sizing subviews in the lazy container.
-    func lazyContentTemplate() -> some View {
-        transformPreference(LazyContentTemplateAnchorsKey.self) { $0[.none] = .empty }
+    func lazySubviewTemplate() -> some View {
+        anchorPreference(key: LazySubviewTemplateAnchorsKey.self, value: .bounds) { [.none : $0] }
     }
     
     /// Sets the hidden template content for sizing subviews in the lazy container.
     ///
     /// - Parameters:
     ///   - id: The identifier of the hidden template content.
-    func lazyContentTemplate(id: some Hashable) -> some View {
-        transformPreference(LazyContentTemplateAnchorsKey.self) { $0[id] = .empty }
+    func lazySubviewTemplate(id: some Hashable) -> some View {
+        anchorPreference(key: LazySubviewTemplateAnchorsKey.self, value: .bounds) { [id : $0] }
     }
 }

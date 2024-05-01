@@ -9,7 +9,7 @@ import SwiftUI
 public struct AltLazyVStack<Content, ContentHeights, Data, ID>: View
 where Content : View,
       ContentHeights : RandomAccessCollection,
-      ContentHeights.Element == LazyContentAnchor<CGFloat>,
+      ContentHeights.Element == LazySubviewSize,
       Data : RandomAccessCollection,
       Data.Index == Int,
       ID : Hashable
@@ -19,25 +19,26 @@ where Content : View,
 
 
 public extension AltLazyVStack {
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    
+    /// A view that arranges its subviews in a vertical line, and only renders each subview 
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentHeight: The height of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeight: The height of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          alignment: HorizontalAlignment = .center,
-         contentHeight: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentHeight: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentHeights == CollectionOfOne<LazyContentAnchor<CGFloat>>,
+    ContentHeights == CollectionOfOne<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -45,15 +46,15 @@ public extension AltLazyVStack {
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: CollectionOfOne(contentHeight),
+            contentSizeProvider: .fixed(sizes: CollectionOfOne(contentHeight)),
             data: data,
             id: \.id,
             spacing: spacing
         )
     }
     
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    /// A view that arranges its subviews in a vertical line, and only renders each subview
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -61,45 +62,45 @@ public extension AltLazyVStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentHeight: The height of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeight: The height of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: HorizontalAlignment = .center,
-         contentHeight: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentHeight: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where ContentHeights == CollectionOfOne<LazyContentAnchor<CGFloat>>
+    where ContentHeights == CollectionOfOne<LazySubviewSize>
     {
         body = LazyStack(
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: CollectionOfOne(contentHeight),
+            contentSizeProvider: .fixed(sizes: CollectionOfOne(contentHeight)),
             data: data,
             id: id,
             spacing: spacing
         )
     }
     
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    /// A view that arranges its subviews in a vertical line, and only renders each subview
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentHeights: The repeating collection of subview heights.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeights: The repeating collection of subview heights.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          alignment: HorizontalAlignment = .center,
+         spacing: Double = .zero,
          contentHeights: ContentHeights,
-         spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
     Data.Element : Identifiable,
@@ -109,15 +110,15 @@ public extension AltLazyVStack {
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: contentHeights,
+            contentSizeProvider: .fixed(sizes: contentHeights),
             data: data,
             id: \.id,
             spacing: spacing
         )
     }
     
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    /// A view that arranges its subviews in a vertical line, and only renders each subview
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -125,30 +126,30 @@ public extension AltLazyVStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentHeights: The repeating collection of subview heights.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentHeights: The repeating collection of subview heights.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: HorizontalAlignment = .center,
+         spacing: Double = .zero,
          contentHeights: ContentHeights,
-         spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     {
         body = LazyStack(
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: contentHeights,
+            contentSizeProvider: .fixed(sizes: contentHeights),
             data: data,
             id: id,
             spacing: spacing
         )
     }
     
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    /// A view that arranges its subviews in a vertical line, and only renders each subview
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -161,11 +162,11 @@ public extension AltLazyVStack {
     ///   - contentHeight: The subview height for each element.
     init(_ data: Data,
          alignment: HorizontalAlignment = .center,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentHeight: (Data.Element) -> LazyContentAnchor<CGFloat>)
+         contentHeight: @escaping (Data.Element) -> LazySubviewSize)
     where
-    ContentHeights == [LazyContentAnchor<CGFloat>],
+    ContentHeights == EmptyCollection<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -173,15 +174,15 @@ public extension AltLazyVStack {
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: data.map(contentHeight),
+            contentSizeProvider: .dynamic(resolveSize: contentHeight),
             data: data,
             id: \.id,
             spacing: spacing
         )
     }
     
-    /// A view that arranges its subviews in a vertical line, and only renders each subview when
-    /// visible in a lazy vertical container.
+    /// A view that arranges its subviews in a vertical line, and only renders each subview
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -196,16 +197,16 @@ public extension AltLazyVStack {
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: HorizontalAlignment = .center,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentHeight: (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where ContentHeights == [LazyContentAnchor<CGFloat>]
+         contentHeight: @escaping (Data.Element) -> LazySubviewSize)
+    where ContentHeights == EmptyCollection<LazySubviewSize>
     {
         body = LazyStack(
             alignment: Alignment(horizontal: alignment, vertical: .top),
             axis: .vertical,
             content: content,
-            contentLengths: data.map(contentHeight),
+            contentSizeProvider: .dynamic(resolveSize: contentHeight),
             data: data,
             id: id,
             spacing: spacing

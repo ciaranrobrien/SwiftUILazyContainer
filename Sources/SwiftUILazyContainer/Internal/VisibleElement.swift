@@ -6,12 +6,11 @@
 
 import SwiftUI
 
-internal struct LazyElement<Element, Geometry, ID>: Identifiable
-where Geometry : Equatable,
-      ID : Hashable
+internal struct VisibleElement<Element, ID, Size>: Identifiable
+where ID : Hashable
 {
     let element: Element
     let id: ID
-    let length: Geometry
-    let offset: Geometry
+    let offset: Size
+    let size: Size
 }

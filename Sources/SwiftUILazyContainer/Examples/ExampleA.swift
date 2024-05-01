@@ -9,7 +9,7 @@ import SwiftUI
 /// Use `lazyContainer` to configure the scroll view for lazy rendering.
 ///
 /// Use `AltLazyVStack` as a replacement for `VStack` or `LazyVStack`
-/// to only render its content when visible in the scroll view.
+/// to only render subviews when visible in the scroll view.
 private struct ContentView: View {
     var data: [FooElement]
     

@@ -4,6 +4,7 @@
 *  MIT license, see LICENSE file for details
 */
 
+import Combine
 import SwiftUI
 import enum Accelerate.vDSP
 
@@ -43,30 +44,36 @@ extension Array<Double>: AdditiveArithmetic, Animatable, VectorArithmetic {
 extension Double: Animatable { }
 
 
-internal extension CGFloat {
-    static let defaultSpacing: Self = 8
+internal extension Axis {
+    var orthogonal: Self {
+        switch self {
+        case .horizontal: .vertical
+        case .vertical: .horizontal
+        }
+    }
 }
 
 
-internal extension LazyContentAnchor {
+internal extension LazySubviewSize {
     enum Source: Equatable {
-        case fixed(Value)
-        case fraction(Value)
+        case aspect(Double)
+        case fixed(Double)
+        case fraction(Double)
         case template(AnyHashable?)
     }
     
-    func resolve(axis: Axis, containerSize: CGSize, templates: [AnyHashable? : CGSize]) -> Double
-    where Value == CGFloat
-    {
+    func resolve(axis: Axis, breadth: Double, containerLength: Double, templates: [AnyHashable? : CGSize]) -> Double {
         sources.reduce(Double.zero) { length, source in
             let nextLength: Double = switch source {
+            case .aspect(let ratio):
+                switch axis {
+                case .horizontal: breadth * ratio
+                case .vertical: breadth / ratio
+                }
             case .fixed(let length):
                 length
             case .fraction(let fraction):
-                switch axis {
-                case .horizontal: containerSize.width * fraction
-                case .vertical: containerSize.height * fraction
-                }
+                containerLength * fraction
             case .template(let id):
                 if let size = templates[id] {
                     switch axis {
@@ -81,29 +88,15 @@ internal extension LazyContentAnchor {
             return length + nextLength
         }
     }
-    
-    func resolve(containerSize: CGSize, templates: [AnyHashable? : CGSize]) -> CGSize
-    where Value == CGSize
-    {
-        sources.reduce(into: CGSize.zero) { size, source in
-            switch source {
-            case .fixed(let length):
-                size.width += length.width
-                size.height += length.height
-            case .fraction(let fraction):
-                size.width += containerSize.width * fraction.width
-                size.height += containerSize.height * fraction.height
-            case .template(let id):
-                let template = templates[id] ?? .zero
-                size.width += template.width
-                size.height += template.height
-            }
-        }
-    }
 }
 
 
 internal extension EnvironmentValues {
+    var _resolvedLazySubviewSize: CGSize {
+        get { self[ResolvedLazySubviewSizeKey.self] }
+        set { self[ResolvedLazySubviewSizeKey.self] = newValue }
+    }
+    
     var lazyContainerRenderFrame: CGRect? {
         get { self[LazyContainerRenderFrameKey.self] }
         set { self[LazyContainerRenderFrameKey.self] = newValue }
@@ -112,38 +105,56 @@ internal extension EnvironmentValues {
         get { self[LazyContainerSizeKey.self] }
         set { self[LazyContainerSizeKey.self] = newValue }
     }
-    var lazyContentLengths: [Double] {
-        get { self[LazyContentLengthsKey.self] }
-        set { self[LazyContentLengthsKey.self] = newValue }
-    }
-    var lazyContentTemplateSizes: [AnyHashable? : CGSize] {
+    var lazySubviewTemplateSizes: [AnyHashable? : CGSize] {
         get { self[LazyContentTemplateSizesKey.self] }
         set { self[LazyContentTemplateSizesKey.self] = newValue }
     }
     
+    var lazyLayoutLength: Double {
+        get { self[LazyLayoutLengthKey.self] }
+        set { self[LazyLayoutLengthKey.self] = newValue }
+    }
+    var lazyLayoutLines: Int {
+        get { self[LazyLayoutLinesKey.self] }
+        set { self[LazyLayoutLinesKey.self] = newValue }
+    }
     var lazyLayoutOrigin: Double {
         get { self[LazyLayoutOriginKey.self] }
         set { self[LazyLayoutOriginKey.self] = newValue }
     }
-    var lazyLayoutSize: CGSize {
-        get { self[LazyLayoutSizeKey.self] }
-        set { self[LazyLayoutSizeKey.self] = newValue }
-    }
     
-    var lazyMasonryElementLengths: [Double] {
-        get { self[LazyMasonryElementLengthsKey.self] }
-        set { self[LazyMasonryElementLengthsKey.self] = newValue }
+    var lazySubviewLengths: [Double] {
+        get { self[LazySubviewLengthsKey.self] }
+        set { self[LazySubviewLengthsKey.self] = newValue }
     }
-    var lazyMasonryElementOffsets: [Double] {
-        get { self[LazyMasonryElementOffsetsKey.self] }
-        set { self[LazyMasonryElementOffsetsKey.self] = newValue }
+    var lazySubviewOffsets: [Double] {
+        get { self[LazySubviewOffsetsKey.self] }
+        set { self[LazySubviewOffsetsKey.self] = newValue }
     }
-    var lazyMasonryElementVectors: [Double] {
-        get { self[LazyMasonryElementVectorsKey.self] }
-        set { self[LazyMasonryElementVectorsKey.self] = newValue }
+    var lazySubviewLineBreadths: [Double] {
+        get { self[LazySubviewLineBreadthsKey.self] }
+        set { self[LazySubviewLineBreadthsKey.self] = newValue }
+    }
+    var lazySubviewLineOffsets: [Double] {
+        get { self[LazySubviewLineOffsetsKey.self] }
+        set { self[LazySubviewLineOffsetsKey.self] = newValue }
     }
 }
 
+
+internal struct LazySubviewTemplateAnchorsKey: PreferenceKey {
+    typealias Value = [AnyHashable? : Anchor<CGRect>]
+    
+    static let defaultValue: Value = [:]
+    
+    static func reduce(value: inout Value, nextValue: () -> Value) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+private struct ResolvedLazySubviewSizeKey: EnvironmentKey {
+    static let defaultValue = CGSize.zero
+}
 
 private struct LazyContainerRenderFrameKey: EnvironmentKey {
     static let defaultValue: CGRect? = nil
@@ -151,26 +162,29 @@ private struct LazyContainerRenderFrameKey: EnvironmentKey {
 private struct LazyContainerSizeKey: EnvironmentKey {
     static let defaultValue: CGSize? = nil
 }
-private struct LazyContentLengthsKey: EnvironmentKey {
-    static let defaultValue = [Double].zero
-}
 private struct LazyContentTemplateSizesKey: EnvironmentKey {
     static let defaultValue = [AnyHashable? : CGSize]()
 }
 
+private struct LazyLayoutLengthKey: EnvironmentKey {
+    static let defaultValue = Double.zero
+}
+private struct LazyLayoutLinesKey: EnvironmentKey {
+    static let defaultValue = Int.zero
+}
 private struct LazyLayoutOriginKey: EnvironmentKey {
     static let defaultValue = Double.zero
 }
-private struct LazyLayoutSizeKey: EnvironmentKey {
-    static let defaultValue = CGSize.zero
-}
 
-private struct LazyMasonryElementLengthsKey: EnvironmentKey {
+private struct LazySubviewLengthsKey: EnvironmentKey {
     static let defaultValue = [Double].zero
 }
-private struct LazyMasonryElementOffsetsKey: EnvironmentKey {
+private struct LazySubviewOffsetsKey: EnvironmentKey {
     static let defaultValue = [Double].zero
 }
-private struct LazyMasonryElementVectorsKey: EnvironmentKey {
+private struct LazySubviewLineBreadthsKey: EnvironmentKey {
+    static let defaultValue = [Double].zero
+}
+private struct LazySubviewLineOffsetsKey: EnvironmentKey {
     static let defaultValue = [Double].zero
 }

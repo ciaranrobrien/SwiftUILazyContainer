@@ -13,7 +13,7 @@ where Templates : View
     private var safeAreaFactors: EdgeInsets
     private var templates: () -> Templates
     
-    init(padding: CGFloat, safeAreaEdges: Edge.Set, templates: @escaping () -> Templates) {
+    init(padding: Double, safeAreaEdges: Edge.Set, templates: @escaping () -> Templates) {
         self.insets = EdgeInsets(
             top: padding,
             leading: padding,
@@ -55,29 +55,31 @@ where Templates : View
             ZStack {
                 templates()
                     .fixedSize()
-                    .transformAnchorPreference(key: LazyContentTemplateAnchorsKey.self, value: .bounds) {
-                        for (id, _) in $0 {
-                            $0[id] = .resolved($1)
+                    // ProMotion max frame rate animations on resize.
+                    .background(
+                        GeometryReader { geometry in
+                            Text(verbatim: "I")
+                                .offset(
+                                    x: min(geometry.size.width * 999, .greatestFiniteMagnitude),
+                                    y: min(geometry.size.height * 999, .greatestFiniteMagnitude)
+                                )
                         }
-                    }
+                    )
+                    // ProMotion max frame rate animations on insert and remove.
+                    .transition(.offset(x: 999_999, y: 999_999))
             }
             .hidden()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .overlayPreferenceValue(LazyContentTemplateAnchorsKey.self) { anchors in
-                let sizes = anchors.reduce(into: [AnyHashable? : CGSize]()) { sizes, anchorPair in
-                    switch anchorPair.value {
-                    case .empty: break
-                    case .resolved(let anchor): sizes[anchorPair.key] = geometry[anchor].size
-                    }
-                }
+            .overlayPreferenceValue(LazySubviewTemplateAnchorsKey.self) { anchors in
+                let sizes = anchors.mapValues { geometry[$0].size }
                 
                 content
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .environment(\.lazyContainerSize, geometry.size)
                     .environment(\.lazyContainerRenderFrame, renderFrame(for: geometry))
-                    .environment(\.lazyContentTemplateSizes, sizes)
+                    .environment(\.lazySubviewTemplateSizes, sizes)
             }
-            .transformPreference(LazyContentTemplateAnchorsKey.self) { $0.removeAll() }
+            .transformPreference(LazySubviewTemplateAnchorsKey.self) { $0.removeAll() }
         }
     }
     

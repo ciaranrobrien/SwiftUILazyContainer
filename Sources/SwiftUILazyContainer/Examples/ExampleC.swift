@@ -6,40 +6,36 @@
 
 import SwiftUI
 
-/// Use `renderingPadding` and `rendersInSafeAreaEdges` to control how far
-/// away from the container's edges content is rendered.
+/// Use `template` and `lazySubviewTemplate` to provide hidden template views for
+/// sizing lazy subviews.
 ///
-/// Use `LazyVMasonry` to arrange subviews in a vertical masonry with lazy rendering.
-///
-/// Use `contentHeights` for a repeating pattern of subview heights.
+/// Combine lazy and non-lazy content in the same scroll view.
 private struct ContentView: View {
     var data: [FooElement]
     
     var body: some View {
         ScrollView {
-            LazyVMasonry(data, columns: 2, contentHeights: [160, 120]) { element in
-                FooContent(element: element)
+            VStack {
+                ForEach(0..<3) { number in
+                    /// Non-lazy content
+                }
+                
+                AltLazyVStack(data, contentHeight: .template) { element in
+                    /// Lazy content
+                }
             }
         }
-        .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all)
-    }
-}
-
-
-/// Use `task`, `onAppear` and `onDisappear` to start and cancel async loading when
-/// the lazy view is rendered. Persist any state outside of the lazy view.
-private struct FooContent: View {
-    var element: FooElement
-    
-    var body: some View {
-        VStack {
-            /// Content
-        }
-        .onAppear {
-            /// Start async loading
-        }
-        .onDisappear {
-            /// Cancel async loading
+        .lazyContainer {
+            VStack {
+                Text(verbatim: "Placeholder")
+                    .font(.headline)
+                
+                Text(verbatim: "Placeholder")
+                    .font(.subheadline)
+            }
+            .padding()
+            .lineLimit(1)
+            .lazySubviewTemplate()
         }
     }
 }

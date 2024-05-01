@@ -13,23 +13,23 @@ where Content : View,
       ID : Hashable
 {
     @Environment(\.displayScale) private var displayScale
-    @Environment(\.lazyMasonryElementLengths) private var elementLengths
-    @Environment(\.lazyMasonryElementOffsets) private var elementOffsets
-    @Environment(\.lazyMasonryElementVectors) private var elementVectors
-    @Environment(\.lazyLayoutSize) private var layoutSize
+    @Environment(\.lazyLayoutLength) private var layoutLength
+    @Environment(\.lazyLayoutLines) private var layoutLines
+    @Environment(\.lazyLayoutOrigin) private var layoutOrigin
     @Environment(\.lazyContainerRenderFrame) private var renderFrame
-    @Environment(\.lazyLayoutOrigin) private var origin
+    @Environment(\.lazySubviewLengths) private var subviewLengths
+    @Environment(\.lazySubviewOffsets) private var subviewOffsets
+    @Environment(\.lazySubviewLineBreadths) private var subviewLineBreadths
+    @Environment(\.lazySubviewLineOffsets) private var subviewLineOffsets
     
-    var alignment: Alignment
     var axis: Axis
     var content: (Data.Element) -> Content
     var data: Data
     var id: KeyPath<Data.Element, ID>
-    var lines: Int
-    var spacing: CGFloat
+    var spacing: Double
     
     var body: some View {
-        ZStack(alignment: alignment) {
+        ZStack(alignment: .topLeading) {
             ForEach(visibleData) { element in
                 LazyMasonryElementContent(
                     axis: axis,
@@ -40,20 +40,19 @@ where Content : View,
         }
     }
     
-    private var visibleData: [LazyElement<Data.Element, CGSize, ID>] {
+    private var visibleData: [VisibleElement<Data.Element, ID, CGSize>] {
         let startIndex = data.startIndex
         let endIndex = data.endIndex
         
         guard let renderFrame, startIndex != endIndex
         else { return [] }
         
-        let (layoutLength, vectorSpan, minOrigin, midOrigin, maxOrigin) = switch axis {
-        case .horizontal: (layoutSize.width, layoutSize.height, renderFrame.minX, renderFrame.midX, renderFrame.maxX)
-        case .vertical: (layoutSize.height, layoutSize.width, renderFrame.minY, renderFrame.midY, renderFrame.maxY)
+        let (minOrigin, midOrigin, maxOrigin) = switch axis {
+        case .horizontal: (renderFrame.minX, renderFrame.midX, renderFrame.maxX)
+        case .vertical: (renderFrame.minY, renderFrame.midY, renderFrame.maxY)
         }
         
-        let vectorLength = ((vectorSpan + spacing) / CGFloat(lines)) - spacing
-        let estimatedPosition = Double(data.count) * (midOrigin + (spacing / 2) - origin) / layoutLength
+        let estimatedPosition = Double(data.count) * (midOrigin + (spacing / 2) - layoutOrigin) / layoutLength
         let estimatedMidIndex = min(max(Int(round(estimatedPosition)) + startIndex, startIndex), endIndex - 1)
         let minOriginScaled = Int(round(minOrigin * displayScale))
         let maxOriginScaled = Int(round(maxOrigin * displayScale))
@@ -66,12 +65,12 @@ where Content : View,
         // TODO: Fix bug where first and last elements are always visible.
         
         while minIndex >= startIndex {
-            let threshold = Int(round((elementOffsets[minIndex] + elementLengths[minIndex] + origin) * displayScale))
+            let threshold = Int(round((subviewOffsets[minIndex] + subviewLengths[minIndex] + layoutOrigin) * displayScale))
             
             if threshold >= minOriginScaled {
                 visibleIndices.insert(minIndex)
             } else if linesRemaining == nil {
-                linesRemaining = lines
+                linesRemaining = layoutLines
             }
             
             minIndex -= 1
@@ -88,12 +87,12 @@ where Content : View,
         linesRemaining = nil
         
         while maxIndex < endIndex {
-            let threshold = Int(round((elementOffsets[maxIndex] + origin) * displayScale))
+            let threshold = Int(round((subviewOffsets[maxIndex] + layoutOrigin) * displayScale))
             
             if threshold <= maxOriginScaled {
                 visibleIndices.insert(maxIndex)
             } else if linesRemaining == nil {
-                linesRemaining = lines
+                linesRemaining = layoutLines
             }
             
             maxIndex += 1
@@ -109,22 +108,21 @@ where Content : View,
         
         return visibleIndices.map { index in
             let element = data[index]
-            let vectorOffset = elementVectors[index] * (vectorLength + spacing)
             
             let offset = CGSize(
-                width: axis == .horizontal ? elementOffsets[index] : vectorOffset,
-                height: axis == .vertical ? elementOffsets[index] : vectorOffset
+                width: axis == .horizontal ? subviewOffsets[index] : subviewLineOffsets[index],
+                height: axis == .vertical ? subviewOffsets[index] : subviewLineOffsets[index]
             )
             let size = CGSize(
-                width: axis == .horizontal ? elementLengths[index] : vectorLength,
-                height: axis == .vertical ? elementLengths[index] : vectorLength
+                width: axis == .horizontal ? subviewLengths[index] : subviewLineBreadths[index],
+                height: axis == .vertical ? subviewLengths[index] : subviewLineBreadths[index]
             )
             
-            return LazyElement(
+            return VisibleElement(
                 element: element,
                 id: element[keyPath: id],
-                length: size,
-                offset: offset
+                offset: offset,
+                size: size
             )
         }
     }
@@ -137,13 +135,14 @@ where Content : View,
 {
     var axis: Axis
     var content: (Element) -> Content
-    var element: LazyElement<Element, CGSize, ID>
+    var element: VisibleElement<Element, ID, CGSize>
     
     var body: some View {
         ZStack {
             content(element.element)
         }
-        .frame(width: element.length.width, height: element.length.height)
+        .environment(\._resolvedLazySubviewSize, element.size)
+        .frame(width: element.size.width, height: element.size.height)
         .offset(element.offset)
     }
 }

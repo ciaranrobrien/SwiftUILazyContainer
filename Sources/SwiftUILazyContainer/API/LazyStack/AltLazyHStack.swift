@@ -9,7 +9,7 @@ import SwiftUI
 public struct AltLazyHStack<Content, ContentWidths, Data, ID>: View
 where Content : View,
       ContentWidths : RandomAccessCollection,
-      ContentWidths.Element == LazyContentAnchor<CGFloat>,
+      ContentWidths.Element == LazySubviewSize,
       Data : RandomAccessCollection,
       Data.Index == Int,
       ID : Hashable
@@ -19,25 +19,26 @@ where Content : View,
 
 
 public extension AltLazyHStack {
+    
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentWidth: The width of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentWidth: The width of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          alignment: VerticalAlignment = .center,
-         contentWidth: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentWidth: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentWidths == CollectionOfOne<LazyContentAnchor<CGFloat>>,
+    ContentWidths == CollectionOfOne<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -45,7 +46,7 @@ public extension AltLazyHStack {
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: CollectionOfOne(contentWidth),
+            contentSizeProvider: .fixed(sizes: CollectionOfOne(contentWidth)),
             data: data,
             id: \.id,
             spacing: spacing
@@ -53,7 +54,7 @@ public extension AltLazyHStack {
     }
     
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -61,23 +62,23 @@ public extension AltLazyHStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentWidth: The width of each subview.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentWidth: The width of each subview.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: VerticalAlignment = .center,
-         contentWidth: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
+         contentWidth: LazySubviewSize,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where ContentWidths == CollectionOfOne<LazyContentAnchor<CGFloat>>
+    where ContentWidths == CollectionOfOne<LazySubviewSize>
     {
         body = LazyStack(
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: CollectionOfOne(contentWidth),
+            contentSizeProvider: .fixed(sizes: CollectionOfOne(contentWidth)),
             data: data,
             id: id,
             spacing: spacing
@@ -85,21 +86,21 @@ public extension AltLazyHStack {
     }
     
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
     /// - Parameters:
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentWidths: The repeating collection of subview widths.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentWidths: The repeating collection of subview widths.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          alignment: VerticalAlignment = .center,
+         spacing: Double = .zero,
          contentWidths: ContentWidths,
-         spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
     Data.Element : Identifiable,
@@ -109,7 +110,7 @@ public extension AltLazyHStack {
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: contentWidths,
+            contentSizeProvider: .fixed(sizes: contentWidths),
             data: data,
             id: \.id,
             spacing: spacing
@@ -117,7 +118,7 @@ public extension AltLazyHStack {
     }
     
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -125,22 +126,22 @@ public extension AltLazyHStack {
     ///   - data: The data that the stack uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
     ///   - alignment: The guide for aligning the subviews in this stack.
-    ///   - contentWidths: The repeating collection of subview widths.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentWidths: The repeating collection of subview widths.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: VerticalAlignment = .center,
+         spacing: Double = .zero,
          contentWidths: ContentWidths,
-         spacing: CGFloat? = nil,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     {
         body = LazyStack(
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: contentWidths,
+            contentSizeProvider: .fixed(sizes: contentWidths),
             data: data,
             id: id,
             spacing: spacing
@@ -148,7 +149,7 @@ public extension AltLazyHStack {
     }
     
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -161,11 +162,11 @@ public extension AltLazyHStack {
     ///   - contentWidth: The subview width for each element.
     init(_ data: Data,
          alignment: VerticalAlignment = .center,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentWidth: (Data.Element) -> LazyContentAnchor<CGFloat>)
+         contentWidth: @escaping (Data.Element) -> LazySubviewSize)
     where
-    ContentWidths == [LazyContentAnchor<CGFloat>],
+    ContentWidths == EmptyCollection<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
@@ -173,7 +174,7 @@ public extension AltLazyHStack {
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: data.map(contentWidth),
+            contentSizeProvider: .dynamic(resolveSize: contentWidth),
             data: data,
             id: \.id,
             spacing: spacing
@@ -181,7 +182,7 @@ public extension AltLazyHStack {
     }
     
     /// A view that arranges its subviews in a horizontal line, and only renders each subview
-    /// when visible in a lazy horizontal container.
+    /// when visible in a lazy container.
     ///
     /// `scrollTargetLayout` has no effect on this view or its subviews.
     ///
@@ -196,16 +197,16 @@ public extension AltLazyHStack {
     init(_ data: Data,
          id: KeyPath<Data.Element, ID>,
          alignment: VerticalAlignment = .center,
-         spacing: CGFloat? = nil,
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentWidth: (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where ContentWidths == [LazyContentAnchor<CGFloat>]
+         contentWidth: @escaping (Data.Element) -> LazySubviewSize)
+    where ContentWidths == EmptyCollection<LazySubviewSize>
     {
         body = LazyStack(
             alignment: Alignment(horizontal: .leading, vertical: alignment),
             axis: .horizontal,
             content: content,
-            contentLengths: data.map(contentWidth),
+            contentSizeProvider: .dynamic(resolveSize: contentWidth),
             data: data,
             id: id,
             spacing: spacing

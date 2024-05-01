@@ -6,69 +6,119 @@
 
 import SwiftUI
 
-public struct LazyMasonry<Content, ContentLengths, Data, ID>: View
+public struct LazyMasonry<Content, ContentSizes, Data, ID>: View
 where Content : View,
-      ContentLengths : RandomAccessCollection,
-      ContentLengths.Element == LazyContentAnchor<CGFloat>,
+      ContentSizes : RandomAccessCollection,
+      ContentSizes.Element == LazySubviewSize,
       Data : RandomAccessCollection,
       Data.Index == Int,
       ID : Hashable
 {
     @Environment(\.lazyContainerSize) private var containerSize
-    @Environment(\.lazyContentTemplateSizes) private var templates
     
-    internal var alignment: Alignment
     internal var axis: Axis
     internal var content: (Data.Element) -> Content
-    internal var contentLengths: ContentLengths
+    internal var contentSizeProvider: LazySubviewSizeProvider<Data.Element, ContentSizes>
     internal var data: Data
     internal var id: KeyPath<Data.Element, ID>
-    internal var lines: Int
-    internal var spacing: CGFloat?
+    internal var lines: [LazyLineSize]
+    internal var spacing: Double
     
     public var body: some View {
-        if let contentLengths = resolvedContentLengths {
-            GeometryReader { geometry in
-                let frame = geometry.frame(in: .global)
-                let origin = switch axis {
-                case .horizontal: frame.minX
-                case .vertical: frame.minY
+        LengthReader(axis.orthogonal) { breadth in
+            if let lineBreadths = lineBreadths(for: breadth) {
+                GeometryReader { geometry in
+                    let frame = geometry.frame(in: .global)
+                    let (length, origin): (Double, Double) = switch axis {
+                    case .horizontal: (frame.width, frame.minX)
+                    case .vertical: (frame.height, frame.minY)
+                    }
+                    
+                    LazyMasonryLayout(
+                        axis: axis,
+                        content: content,
+                        data: data,
+                        id: id,
+                        spacing: spacing
+                    )
+                    .modifier(AnimatableEnvironment(\.lazyLayoutLength, length))
+                    .modifier(AnimatableEnvironment(\.lazyLayoutOrigin, origin))
                 }
-                
-                LazyMasonryLayout(
-                    alignment: alignment,
+                .modifier(LazyMasonryModifier(
                     axis: axis,
-                    content: content,
+                    contentSizeProvider: contentSizeProvider,
                     data: data,
-                    id: id,
-                    lines: lines,
-                    spacing: spacing ?? .defaultSpacing
-                )
-                .modifier(AnimatableEnvironment(keyPath: \.lazyLayoutOrigin, value: origin))
-                .modifier(AnimatableEnvironment(keyPath: \.lazyLayoutSize, value: geometry.size))
+                    lineBreadths: lineBreadths,
+                    spacing: spacing
+                ))
             }
-            .modifier(LazyMasonryModifier(
-                axis: axis,
-                contentLengths: contentLengths,
-                count: data.count,
-                lines: lines,
-                spacing: spacing ?? .defaultSpacing
-            ))
         }
     }
     
-    private var resolvedContentLengths: [Double]? {
-        guard !contentLengths.isEmpty, let containerSize
+    private func lineBreadths(for breadth: Double?) -> [Double]? {
+        guard !lines.isEmpty, let containerSize
         else { return nil }
         
-        return contentLengths.map {
-            $0.resolve(axis: axis, containerSize: containerSize, templates: templates)
+        var remainingSpace: Double = if let breadth {
+            breadth
+        } else {
+            switch axis {
+            case .horizontal: containerSize.height
+            case .vertical: containerSize.width
+            }
         }
+        
+        guard remainingSpace > .zero else { return nil }
+        remainingSpace += spacing
+        
+        var lineIndices = lines.indices.map { $0 }
+        var resolvedLines = Array(repeating: [Double](), count: lines.count)
+        
+        lineIndices = lineIndices.reduce(into: [Int]()) { indices, index in
+            switch lines[index] {
+            case .adaptive, .flexible:
+                indices.append(index)
+            case .fixed(let length):
+                resolvedLines[index] = [length]
+                remainingSpace -= length + spacing
+            }
+        }
+        
+        if !lineIndices.isEmpty {
+            let flexibleSpace = remainingSpace / Double(lineIndices.count)
+            
+            for index in lineIndices {
+                switch lines[index] {
+                case .flexible:
+                    resolvedLines[index] = [flexibleSpace - spacing]
+                    
+                case .adaptive(let constraint):
+                    let rawCount = switch constraint {
+                    case .min(let minLength):
+                        floor(flexibleSpace / (minLength + spacing))
+                    case .max(let maxLength):
+                        ceil(flexibleSpace / (maxLength + spacing))
+                    }
+                    
+                    let count = Int(rawCount)
+                    guard count > .zero else { return nil }
+                    
+                    let length = flexibleSpace / rawCount
+                    resolvedLines[index] = Array(repeating: length - spacing, count: Int(count))
+                    
+                case .fixed:
+                    break
+                }
+            }
+        }
+        
+        return resolvedLines.flatMap { $0 }
     }
 }
 
 
 public extension LazyMasonry {
+    
     /// A view that arranges its subviews in a masonry, and only renders each subview when
     /// visible in a lazy container.
     ///
@@ -77,31 +127,24 @@ public extension LazyMasonry {
     /// - Parameters:
     ///   - axis: The layout axis of this masonry.
     ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentLength: The length of each subview.
+    ///   - lines: The lines of the masonry.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSizes: The repeating collection of subview sizes.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ axis: Axis,
          _ data: Data,
-         lines: Int,
-         alignment: Alignment = .center,
-         contentLength: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         lines: [LazyLineSize],
+         spacing: Double = .zero,
+         contentSizes: ContentSizes,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
     where
-    ContentLengths == CollectionOfOne<LazyContentAnchor<CGFloat>>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
         self.axis = axis
         self.content = content
-        self.contentLengths = CollectionOfOne(contentLength)
+        self.contentSizeProvider = .fixed(sizes: contentSizes)
         self.data = data
         self.id = \.id
         self.lines = lines
@@ -117,29 +160,22 @@ public extension LazyMasonry {
     ///   - axis: The layout axis of this masonry.
     ///   - data: The data that the masonry uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentLength: The length of each subview.
+    ///   - lines: The lines of the masonry.
     ///   - spacing: The distance between adjacent subviews.
+    ///   - contentSizes: The repeating collection of subview sizes.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
     init(_ axis: Axis,
          _ data: Data,
          id: KeyPath<Data.Element, ID>,
-         lines: Int,
-         alignment: Alignment = .center,
-         contentLength: LazyContentAnchor<CGFloat>,
-         spacing: CGFloat? = nil,
+         lines: [LazyLineSize],
+         spacing: Double = .zero,
+         contentSizes: ContentSizes,
          @ViewBuilder content: @escaping (Data.Element) -> Content)
-    where ContentLengths == CollectionOfOne<LazyContentAnchor<CGFloat>>
     {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
         self.axis = axis
         self.content = content
-        self.contentLengths = CollectionOfOne(contentLength)
+        self.contentSizeProvider = .fixed(sizes: contentSizes)
         self.data = data
         self.id = id
         self.lines = lines
@@ -154,30 +190,25 @@ public extension LazyMasonry {
     /// - Parameters:
     ///   - axis: The layout axis of this masonry.
     ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentLengths: The repeating collection of subview lengths.
+    ///   - lines: The lines of the masonry.
     ///   - spacing: The distance between adjacent subviews.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
+    ///   - contentSize: The subview size for each element.
     init(_ axis: Axis,
          _ data: Data,
-         lines: Int,
-         alignment: Alignment = .center,
-         contentLengths: ContentLengths,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
+         lines: [LazyLineSize],
+         spacing: Double = .zero,
+         @ViewBuilder content: @escaping (Data.Element) -> Content,
+         contentSize: @escaping (Data.Element) -> LazySubviewSize)
     where
+    ContentSizes == EmptyCollection<LazySubviewSize>,
     Data.Element : Identifiable,
     Data.Element.ID == ID
     {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
         self.axis = axis
         self.content = content
-        self.contentLengths = contentLengths
+        self.contentSizeProvider = .dynamic(resolveSize: contentSize)
         self.data = data
         self.id = \.id
         self.lines = lines
@@ -193,105 +224,23 @@ public extension LazyMasonry {
     ///   - axis: The layout axis of this masonry.
     ///   - data: The data that the masonry uses to create views dynamically.
     ///   - id: The key path to the provided data's identifier.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - contentLengths: The repeating collection of subview lengths.
+    ///   - lines: The lines of the masonry.
     ///   - spacing: The distance between adjacent subviews.
     ///   - content: The view builder that creates views dynamically. Avoid persisting
     ///     state inside the content.
+    ///   - contentSize: The subview size for each element.
     init(_ axis: Axis,
          _ data: Data,
          id: KeyPath<Data.Element, ID>,
-         lines: Int,
-         alignment: Alignment = .center,
-         contentLengths: ContentLengths,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content)
-    {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
-        self.axis = axis
-        self.content = content
-        self.contentLengths = contentLengths
-        self.data = data
-        self.id = id
-        self.lines = lines
-        self.spacing = spacing
-    }
-    
-    /// A view that arranges its subviews in a masonry, and only renders each subview when
-    /// visible in a lazy container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - axis: The layout axis of this masonry.
-    ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    ///   - contentLength: The subview length for each element.
-    init(_ axis: Axis,
-         _ data: Data,
-         lines: Int,
-         alignment: Alignment = .center,
-         spacing: CGFloat? = nil,
+         lines: [LazyLineSize],
+         spacing: Double = .zero,
          @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentLength: @escaping (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where
-    ContentLengths == [LazyContentAnchor<CGFloat>],
-    Data.Element : Identifiable,
-    Data.Element.ID == ID
+         contentSize: @escaping (Data.Element) -> LazySubviewSize)
+    where ContentSizes == EmptyCollection<LazySubviewSize>
     {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
         self.axis = axis
         self.content = content
-        self.contentLengths = data.map(contentLength)
-        self.data = data
-        self.id = \.id
-        self.lines = lines
-        self.spacing = spacing
-    }
-    
-    /// A view that arranges its subviews in a masonry, and only renders each subview when
-    /// visible in a lazy container.
-    ///
-    /// `scrollTargetLayout` has no effect on this view or its subviews.
-    ///
-    /// - Parameters:
-    ///   - axis: The layout axis of this masonry.
-    ///   - data: The data that the masonry uses to create views dynamically.
-    ///   - id: The key path to the provided data's identifier.
-    ///   - lines: The number of lines.
-    ///   - alignment: The guide for aligning the subviews in this masonry.
-    ///   - spacing: The distance between adjacent subviews.
-    ///   - content: The view builder that creates views dynamically. Avoid persisting
-    ///     state inside the content.
-    ///   - contentLength: The subview length for each element.
-    init(_ axis: Axis,
-         _ data: Data,
-         id: KeyPath<Data.Element, ID>,
-         lines: Int,
-         alignment: Alignment = .center,
-         spacing: CGFloat? = nil,
-         @ViewBuilder content: @escaping (Data.Element) -> Content,
-         contentLength: @escaping (Data.Element) -> LazyContentAnchor<CGFloat>)
-    where ContentLengths == [LazyContentAnchor<CGFloat>]
-    {
-        self.alignment = Alignment(
-            horizontal: axis == .horizontal ? .leading : alignment.horizontal,
-            vertical: axis == .vertical ? .top : alignment.vertical
-        )
-        self.axis = axis
-        self.content = content
-        self.contentLengths = data.map(contentLength)
+        self.contentSizeProvider = .dynamic(resolveSize: contentSize)
         self.data = data
         self.id = id
         self.lines = lines
