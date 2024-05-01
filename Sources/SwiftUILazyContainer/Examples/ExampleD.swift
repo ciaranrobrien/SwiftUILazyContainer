@@ -8,8 +8,8 @@ import SwiftUI
 
 /// Use the `contentHeight` closure to resolve subview heights for each element.
 ///
-/// Combine `LazySubviewSize` values with `+` or `sum` to build subview heights
-/// from multiple anchors.
+/// Combine `LazySubviewSize` values with `+` or `sum` to dynamically build subview
+/// heights.
 ///
 /// Provide multiple template views to `lazyContainer`. Assign each template a unique
 /// identifier to resolve different template sizes during layout.
@@ -21,9 +21,9 @@ private struct ContentView: View {
             LazyVMasonry(data, columns: .adaptive(minSize: 140), spacing: 8) { element in
                 /// Lazy content
             } contentHeight: { element in
-                let imageAnchor = LazySubviewSize.aspect(element.imageSize.width / element.imageSize.height)
-                let titleAnchor = LazySubviewSize.template(id: element.subtitle == nil ? 1 : 2)
-                return imageAnchor + titleAnchor
+                let imageHeight = LazySubviewSize.aspect(element.imageSize.width / element.imageSize.height)
+                let titleHeight = LazySubviewSize.template(id: element.subtitle == nil ? 1 : 2)
+                return imageHeight + titleHeight
             }
         }
         .lazyContainer {
