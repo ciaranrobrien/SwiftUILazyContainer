@@ -21,8 +21,6 @@ ScrollView {
 
 Use `LazyVMasonry` to arrange subviews in a vertical masonry with lazy rendering.
 
-Use `renderingPadding` and `rendersInSafeAreaEdges` to control how far away from the container's edges subviews are rendered.
-
 ```swift
 ScrollView {
     LazyVMasonry(data, columns: 2, contentHeights: [.fraction(1/4), .fraction(1/5)]) { element in
