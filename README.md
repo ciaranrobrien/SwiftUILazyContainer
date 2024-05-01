@@ -25,8 +25,8 @@ Use `renderingPadding` and `rendersInSafeAreaEdges` to control how far away from
 
 ```swift
 ScrollView {
-    LazyVMasonry(data, columns: 2, contentHeights: [160, 120]) { element in
-                /// Lazy content
+    LazyVMasonry(data, columns: 2, contentHeights: [.fraction(1/4), .fraction(1/5)]) { element in
+        /// Lazy content
     }
 }
 .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all)
@@ -34,57 +34,59 @@ ScrollView {
 
 ## Advanced Usage
 
-Use `LazyVContent` for lazy rendering in an existing SwiftUI layout. Note that, when used frequently,`LazyVContent` can impact scroll performance.
-
-Use `fraction` to fix lazy content height at a fraction of the lazy container's height.
+Use `template` and `lazySubviewTemplate` to provide hidden template views for sizing lazy subviews.
 
 ```swift
-private struct ContentView: View {
-    var body: some View {
-        ScrollView {
-            VStack {
-                ForEach(0..<100) { number in
-                    LazyVContent(height: .fraction(1/3)) {
-                        /// Lazy content
-                    }
-                }
-            }
+ScrollView {
+    VStack {
+        AltLazyVStack(data, contentHeight: .template) { element in
+            /// Lazy content
         }
-        .lazyContainer()
     }
+}
+.lazyContainer {
+    VStack {
+        Text(verbatim: "Placeholder")
+            .font(.headline)
+        
+        Text(verbatim: "Placeholder")
+            .font(.subheadline)
+    }
+    .padding()
+    .lineLimit(1)
+    .lazySubviewTemplate()
 }
 ```
 
-Use `lazySubviewTemplate` to provide a hidden template view to size lazy content.
+Use the `contentHeight` closure to resolve subview heights for each element. Combine `LazySubviewSize` values with `+` or `sum` to build subview heights from multiple anchors.
 
 ```swift
-private struct ContentView: View {
-    var data: [FooElement]
-    
-    var body: some View {
-        ScrollView {
-            VStack {
-                ForEach(0..<3) { number in
-                    /// Non-lazy content
-                }
-                
-                AltLazyVStack(data, contentHeight: .template) { element in
-                    /// Lazy content
-                }
-            }
-        }
-        .lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all) {
-            VStack {
-                Text(verbatim: "Placeholder")
-                    .font(.headline)
-                
-                Text(verbatim: "Placeholder")
-                    .font(.subheadline)
-            }
-            .lineLimit(1)
-            .lazySubviewTemplate()
-        }
+ScrollView {
+    LazyVMasonry(data, columns: .adaptive(minSize: 140)) { element in
+        /// Lazy content
+    } contentHeight: { element in
+        let imageAnchor = LazySubviewSize.aspect(element.imageSize.width / element.imageSize.height)
+        let titleAnchor = LazySubviewSize.template(id: element.subtitle == nil ? 1 : 2)
+        return imageAnchor + titleAnchor
     }
+}
+.lazyContainer {
+    Text(verbatim: "Title Placeholder")
+        .font(.headline)
+        .padding()
+        .lineLimit(1)
+        .lazySubviewTemplate(id: 1)
+    
+    VStack {
+        Text(verbatim: "Title Placeholder")
+            .font(.headline)
+        
+        Text(verbatim: "Subtitle Placeholder")
+            .font(.subheadline)
+    }
+    .padding()
+    .lineLimit(1)
+    .lazySubviewTemplate(id: 2)
 }
 ```
 

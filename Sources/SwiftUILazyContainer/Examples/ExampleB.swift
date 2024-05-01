@@ -17,7 +17,7 @@ private struct ContentView: View {
     
     var body: some View {
         ScrollView {
-            LazyVMasonry(data, columns: 2, contentHeights: [160, 120]) { element in
+            LazyVMasonry(data, columns: 2, contentHeights: [.fraction(1/4), .fraction(1/5)]) { element in
                 FooContent(element: element)
             }
         }
