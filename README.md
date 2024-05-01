@@ -11,13 +11,25 @@ Use `lazyContainer` to configure the scroll view for lazy rendering.
 Use `AltLazyVStack` as a replacement for `VStack` or `LazyVStack` to only render its content when visible in the scroll view.
 
 ```swift
-    ScrollView {
-        AltLazyVStack(data, contentHeight: 200) { element in
-            /// Lazy content
-        }
+ScrollView {
+    AltLazyVStack(data, contentHeight: 200) { element in
+        /// Lazy content
     }
-    .lazyContainer()
 }
+.lazyContainer()
+```
+
+Use `LazyVMasonry` to arrange subviews in a vertical masonry with lazy rendering.
+
+Use `renderingPadding` and `rendersInSafeAreaEdges` to control how far away from the container's edges subviews are rendered.
+
+```swift
+ScrollView {
+    LazyVMasonry(data, columns: 2, contentHeights: [160, 120]) { element in
+                /// Lazy content
+    }
+}
+.lazyContainer(renderingPadding: 16, rendersInSafeAreaEdges: .all)
 ```
 
 ## Advanced Usage
