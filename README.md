@@ -62,7 +62,7 @@ Use the `contentHeight` closure to resolve subview heights for each element. Com
 
 ```swift
 ScrollView {
-    LazyVMasonry(data, columns: .adaptive(minSize: 140)) { element in
+    LazyVMasonry(data, columns: .adaptive(minSize: 140), spacing: 8) { element in
         /// Lazy content
     } contentHeight: { element in
         let imageAnchor = LazySubviewSize.aspect(element.imageSize.width / element.imageSize.height)
