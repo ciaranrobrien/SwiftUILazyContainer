@@ -2,8 +2,6 @@
 
 Lazy rendering and layouts in a SwiftUI ScrollView.
 
-For existing SwiftUI layouts, consider [SwiftUIOnVisible](https://github.com/ciaranrobrien/SwiftUIOnVisible) instead to get callbacks when subviews become visible in a ScrollView.
-
 ## Get Started
 
 Use `lazyContainer` to configure the scroll view for lazy rendering.
@@ -99,7 +97,3 @@ See [Examples](/Sources/SwiftUILazyContainer/Examples/) for more.
 
 * Install with [Swift Package Manager](https://developer.apple.com/documentation/xcode/adding_package_dependencies_to_your_app).
 * Import `SwiftUILazyContainer` to start using.
-
-## Contact
-
-[@ciaranrobrien](https://twitter.com/ciaranrobrien) on Twitter.
